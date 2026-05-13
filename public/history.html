@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auction history — Marathon Server</title>
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <div class="shell" style="padding-top: 1.5rem">
+      <header class="app-header">
+        <div class="brand">
+          <img src="/assets/logo.png" width="56" height="56" alt="" />
+          <div class="brand-text">
+            <h1>Auction history</h1>
+            <p>— Finalized lots —</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a href="/room.html">Room</a>
+          <a href="/history.html">History</a>
+          <a href="/rules.html">Rules</a>
+          <button type="button" class="ghost" id="btn-logout">Logout</button>
+        </nav>
+      </header>
+
+      <div class="hud-panel" style="padding: 1rem 1.1rem; margin-bottom: 1rem">
+        <label class="field" style="margin: 0">
+          <span>Filter by item name</span>
+          <input type="search" id="filter-q" placeholder="Type to filter…" style="max-width: 320px" />
+        </label>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data" id="hist-table">
+          <thead>
+            <tr>
+              <th data-sort="item_name">Item</th>
+              <th data-sort="created_at">Opened</th>
+              <th data-sort="finalized_at">Finalized</th>
+              <th>Result</th>
+              <th data-sort="winning_amount">Winning bid</th>
+            </tr>
+          </thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+      <p id="hist-empty" class="hidden" style="color: var(--text-muted); text-align: center; margin-top: 2rem">
+        No finalized rounds yet.
+      </p>
+    </div>
+    <script type="module" src="/js/history.js"></script>
+  </body>
+</html>

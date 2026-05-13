@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rules — Marathon Server Auction</title>
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <div class="shell" style="padding-top: 1.5rem; padding-bottom: 3rem">
+      <header class="app-header">
+        <div class="brand">
+          <img src="/assets/logo.png" width="56" height="56" alt="" />
+          <div class="brand-text">
+            <h1>Chamber rules</h1>
+            <p>— Marathon Server —</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a href="/room.html">Room</a>
+          <a href="/history.html">History</a>
+          <a href="/rules.html">Rules</a>
+          <button type="button" class="ghost" id="btn-logout">Logout</button>
+        </nav>
+      </header>
+
+      <div class="hud-panel rules-prose" style="padding: 1.75rem 2rem">
+        <p style="color: var(--silver); font-size: 1.05rem; margin-top: 0">
+          These rules govern the Marathon Server squad auction chamber. All operators are expected to uphold competitive
+          integrity and host authority at all times.
+        </p>
+
+        <h2>Auction mechanics</h2>
+        <p>
+          Auctions run in discrete <strong>lots</strong> (rounds). Only the Head Admin may open a lot or finalize it.
+          When a lot is live, all four squad leaders may place bids or skip. Skipping records your squad as out for
+          that lot but <strong>does not end bidding</strong> for other squads.
+        </p>
+
+        <h2>Valid bidding</h2>
+        <ul>
+          <li>Bids must be whole integers.</li>
+          <li>Each bid must be greater than or equal to the published minimum for the lot.</li>
+          <li>Each bid must be strictly greater than the current highest valid bid.</li>
+          <li>No bid may exceed your squad’s current treasury balance at the moment it is validated.</li>
+          <li>After your squad skips the current lot, you cannot bid on that lot.</li>
+        </ul>
+        <p>
+          Invalid bids are rejected immediately by the system. Attempts may be logged in the live telemetry feed for
+          transparency and review.
+        </p>
+
+        <h2>Treasury rules</h2>
+        <p>
+          Each squad maintains a persistent treasury balance stored server-side. Balances are only reduced when a lot
+          is finalized and your squad is the clear winner with the highest valid bid. Opening bids or leading during a
+          round does not debit the treasury until finalize.
+        </p>
+
+        <h2>Transfers &amp; history</h2>
+        <p>
+          When a lot is sold, the winning amount is deducted from the winner’s treasury, the lot is recorded in auction
+          history, and ledger entries are written for audit. If no valid bids exist at finalize, the lot is marked
+          <strong>UNSOLD</strong> and no treasury movement occurs.
+        </p>
+
+        <h2>Admin authority</h2>
+        <p>
+          The Head Admin controls the tempo of the event: creating lots, publishing minimums and descriptions, and
+          issuing the sole <strong>Finalize</strong> action that closes a lot and locks results. Admin decisions within
+          this system are final for the purposes of the auction session.
+        </p>
+
+        <h2>Conduct &amp; penalties</h2>
+        <p>
+          Collusion, account sharing, attempting to bypass validation, or interfering with other operators’ sessions is
+          prohibited. Off-platform penalties (strikes, disqualification from future auctions) are at Marathon Server
+          staff discretion and are not limited to what this software can detect.
+        </p>
+
+        <p style="margin-top: 2rem; font-size: 0.85rem; color: var(--text-muted)">
+          Return to the <a href="/room.html">live room</a> when instructed.
+        </p>
+      </div>
+    </div>
+    <script type="module">
+      import { me, logout } from "/js/auth.js";
+      document.getElementById("btn-logout").onclick = async () => {
+        await logout();
+        sessionStorage.removeItem("marathon_ws");
+        window.location.href = "/login.html";
+      };
+      const ok = await me().then(() => true).catch(() => false);
+      if (!ok) window.location.href = "/login.html";
+    </script>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auction room — Marathon Server</title>
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <div class="particles" id="particles"></div>
+    <div class="shell">
+      <header class="app-header">
+        <div class="brand">
+          <img src="/assets/logo.png" width="72" height="72" alt="" />
+          <div class="brand-text">
+            <h1>Marathon Server</h1>
+            <p>— Live auction —</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a href="/room.html">Room</a>
+          <a href="/history.html">History</a>
+          <a href="/rules.html">Rules</a>
+          <a href="/logs.html" id="nav-logs" class="hidden">Logs</a>
+          <span id="user-label" style="color: var(--text-muted); font-size: 0.75rem"></span>
+          <button type="button" class="ghost" id="btn-logout">Logout</button>
+        </nav>
+      </header>
+
+      <div class="presence-bar">
+        <span style="letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.65rem; color: var(--accent)"
+          >Linked operators</span
+        >
+        <span id="presence-list"></span>
+      </div>
+
+      <div class="room-grid">
+        <aside class="hud-panel command-deck hidden" id="command-deck">
+          <h2 class="hud-title">Host command deck</h2>
+          <form id="round-form">
+            <div class="field">
+              <label for="itemName">Item / player name</label>
+              <input id="itemName" name="itemName" required maxlength="200" />
+            </div>
+            <div class="field">
+              <label for="minBid">Minimum bid</label>
+              <input id="minBid" name="minBid" type="number" min="1" step="1" required />
+            </div>
+            <div class="field">
+              <label for="description">Short description</label>
+              <textarea id="description" name="description" maxlength="2000"></textarea>
+            </div>
+            <div class="field">
+              <label for="squadAffiliation">Squad affiliation (optional)</label>
+              <input id="squadAffiliation" name="squadAffiliation" maxlength="200" />
+            </div>
+            <div class="field">
+              <label for="xpStats">XP / stats (optional)</label>
+              <input id="xpStats" name="xpStats" maxlength="500" />
+            </div>
+            <div class="field">
+              <label for="contributionInfo">Contribution info (optional)</label>
+              <input id="contributionInfo" name="contributionInfo" maxlength="500" />
+            </div>
+            <div class="field">
+              <label for="imageUrl">Image URL (optional)</label>
+              <input id="imageUrl" name="imageUrl" type="url" maxlength="500" placeholder="https://…" />
+            </div>
+            <div class="btn-row">
+              <button type="submit" class="btn btn-primary" id="btnLaunchRound">Open lot LIVE</button>
+            </div>
+          </form>
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(184, 190, 200, 0.15)">
+            <p class="hud-title" style="margin-bottom: 0.5rem">Round control</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.75rem">
+              Only you can finalize. Skips do not end the round.
+            </p>
+            <button type="button" class="btn btn-danger" id="btn-finalize" disabled>Finalize lot</button>
+          </div>
+        </aside>
+
+        <section class="hud-panel arena" id="arena">
+          <div id="status-strip" class="status-strip waiting"><span class="pulse-dot"></span> INITIALIZING…</div>
+          <div id="arena-main">
+            <h2 class="item-title" id="arena-item-title">Synchronizing state…</h2>
+            <p class="item-meta" id="arena-item-desc"></p>
+            <div id="arena-item-extra"></div>
+            <div id="arena-high-bid"></div>
+          </div>
+        </section>
+
+        <aside class="hud-panel feed-panel">
+          <div class="feed-head">Live telemetry</div>
+          <div class="feed-body" id="feed-body"></div>
+        </aside>
+      </div>
+
+      <section id="squad-strip" class="squad-strip"></section>
+    </div>
+
+    <script type="module" src="/js/room.js"></script>
+  </body>
+</html>

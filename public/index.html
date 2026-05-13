@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marathon Server Auction</title>
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+  </head>
+  <body>
+    <script type="module">
+      try {
+        const r = await fetch("/api/me", { credentials: "include" });
+        window.location.href = r.ok ? "/room.html" : "/login.html";
+      } catch {
+        window.location.href = "/login.html";
+      }
+    </script>
+    <p style="font-family: system-ui; color: #888; text-align: center; margin-top: 3rem">Loading…</p>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "marathon-auction-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marathon Server squad auction. Requirements: Node 22.5+ (uses built-in node:sqlite). Set SESSION_SECRET (16+ chars). First boot seeds 5 users from env: ADMIN_USER, ADMIN_PASS, ZENITH_USER, ZENITH_PASS, APEX_USER, APEX_PASS, MERIDIAN_USER, MERIDIAN_PASS, HORIZON_USER, HORIZON_PASS. Optional: PORT (default 3000), SQLITE_PATH (default ./data.sqlite), INITIAL_TREASURY (default 10000), NODE_ENV=production (Secure cookies). Run: npm install && npm start. Deploy on a single VM/container with a persistent disk for the SQLite file; terminate TLS at your reverse proxy.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "express-session": "^1.18.1",
+    "ws": "^8.18.0"
+  }
+}
