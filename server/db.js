@@ -167,11 +167,6 @@ export async function seedUsers(db) {
 }
 
 export async function ensureSeeded(db) {
-  const n = db.prepare("SELECT COUNT(*) AS c FROM users").get().c;
-  if (n === 0) {
-    seedSquads(db);
-    await seedUsers(db);
-    return;
-  }
   seedSquads(db);
+  await seedUsers(db);
 }
