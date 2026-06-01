@@ -18,9 +18,10 @@ import {
   placeBid,
   finalizeRound,
   getHistoryPage,
-  getAuditLogs,
   buildPublicState,
   issueWsToken,
+  setSquadTreasury,
+  advancePhase,
 } from "./auction.js";
 import { requireAuth, requireAdmin, requireLeader, sessionUserPayload } from "./auth.js";
 
@@ -218,6 +219,21 @@ app.post("/api/rounds/:id/finalize", requireAuth, requireAdmin, (req, res) => {
   res.json(result);
 });
 
+app.post("/api/rounds/:id/advance", requireAuth, requireAdmin, (req, res) => {
+  const roundId = Number(req.params.id);
+  if (!Number.isInteger(roundId)) {
+    res.status(400).json({ error: "Invalid round id." });
+    return;
+  }
+  const result = advancePhase(db, roundId, req.session.userId);
+  if (!result.ok) {
+    res.status(400).json({ error: result.message });
+    return;
+  }
+  broadcast();
+  res.json(result);
+});
+
 app.post("/api/rounds/:id/bid", requireAuth, requireLeader, (req, res) => {
   const roundId = Number(req.params.id);
   if (!Number.isInteger(roundId)) {
@@ -279,6 +295,18 @@ app.get("/api/logs", requireAuth, requireAdmin, (req, res) => {
 if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir));
 }
+
+app.post("/api/squads/:id/treasury", requireAuth, requireAdmin, (req, res) => {
+  const squadId = Number(req.params.id);
+  const amount = Number(req.body?.amount);
+  const result = setSquadTreasury(db, squadId, amount, req.session.userId);
+  if (!result.ok) {
+    res.status(400).json({ error: result.message });
+    return;
+  }
+  broadcast();
+  res.json({ ok: true });
+});
 
 app.use((req, res) => {
   if (req.path.startsWith("/api")) {

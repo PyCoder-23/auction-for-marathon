@@ -37,7 +37,7 @@ export function getLiveRound(db) {
   return db
     .prepare(
       `SELECT id, status, item_name, min_bid, description, squad_affiliation, xp_stats,
-              contribution_info, image_url, created_at
+              contribution_info, image_url, created_at, item_type, owner_squad_id, phase, phase1_winner_id
        FROM rounds WHERE status = 'live' ORDER BY id DESC LIMIT 1`
     )
     .get();
@@ -121,6 +121,8 @@ export function createLiveRound(db, adminUserId, body) {
   const contributionInfo =
     body.contributionInfo != null ? stripTags(String(body.contributionInfo)).slice(0, 500) : null;
   const imageUrl = body.imageUrl != null ? stripTags(String(body.imageUrl)).slice(0, 500) : null;
+  const itemType = body.itemType === 'player' ? 'player' : 'item';
+  const ownerSquadId = body.ownerSquadId ? Number(body.ownerSquadId) : null;
 
   if (!itemName) {
     return { ok: false, code: "INVALID_ITEM", message: "Item name is required." };
@@ -132,10 +134,10 @@ export function createLiveRound(db, adminUserId, body) {
   const t = nowIso();
   const info = db
     .prepare(
-      `INSERT INTO rounds (status, item_name, min_bid, description, squad_affiliation, xp_stats, contribution_info, image_url, created_at, unsold)
-     VALUES ('live', ?, ?, ?, ?, ?, ?, ?, ?, 0)`
+      `INSERT INTO rounds (status, item_name, min_bid, description, squad_affiliation, xp_stats, contribution_info, image_url, created_at, unsold, item_type, owner_squad_id, phase)
+     VALUES ('live', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)`
     )
-    .run(itemName, minBid, description, squadAffiliation, xpStats, contributionInfo, imageUrl, t);
+    .run(itemName, minBid, description, squadAffiliation, xpStats, contributionInfo, imageUrl, t, itemType, ownerSquadId);
 
   const roundId = info.lastInsertRowid;
   appendEvent(db, {
@@ -143,10 +145,29 @@ export function createLiveRound(db, adminUserId, body) {
     eventType: "ROUND_LIVE",
     squadId: null,
     userId: adminUserId,
-    meta: { itemName, minBid },
+    meta: { itemName, minBid, itemType, phase: 1 },
   });
 
   return { ok: true, roundId };
+}
+
+export function advancePhase(db, roundId, adminUserId) {
+  const round = db.prepare("SELECT id, status, item_type, phase FROM rounds WHERE id = ?").get(roundId);
+  if (!round || round.status !== "live" || round.item_type !== "player" || round.phase !== 1) {
+    return { ok: false, message: "Cannot advance phase." };
+  }
+  const high = getCurrentHighBid(db, roundId);
+  if (!high) {
+    return { ok: false, message: "No bids yet, cannot advance to Phase 2." };
+  }
+  db.prepare("UPDATE rounds SET phase = 2, phase1_winner_id = ? WHERE id = ?").run(high.squad_id, roundId);
+  appendEvent(db, {
+    roundId,
+    eventType: "PHASE_ADVANCE",
+    userId: adminUserId,
+    meta: { newPhase: 2, phase1Winner: high.squad_name }
+  });
+  return { ok: true };
 }
 
 export function recordSkip(db, roundId, user) {
@@ -181,12 +202,20 @@ export function recordSkip(db, roundId, user) {
 }
 
 export function placeBid(db, roundId, user, rawAmount) {
-  const round = db.prepare("SELECT id, status, min_bid FROM rounds WHERE id = ?").get(roundId);
+  const round = db.prepare("SELECT id, status, min_bid, item_type, owner_squad_id, phase, phase1_winner_id FROM rounds WHERE id = ?").get(roundId);
   if (!round || round.status !== "live") {
     return { ok: false, code: "ROUND_NOT_LIVE", message: "No live auction round." };
   }
   if (user.role !== "squad_leader" || !user.squad_id) {
     return { ok: false, code: "FORBIDDEN", message: "Only squad leaders can bid." };
+  }
+  if (round.item_type === 'player') {
+    if (round.phase === 1 && user.squad_id === round.owner_squad_id) {
+       return { ok: false, code: "OWNER_CANNOT_BID_PHASE1", message: "Owner cannot bid in Phase 1." };
+    }
+    if (round.phase === 2 && user.squad_id !== round.owner_squad_id && user.squad_id !== round.phase1_winner_id) {
+       return { ok: false, code: "PHASE2_RESTRICTED", message: "Only Phase 1 winner and owner can bid in Phase 2." };
+    }
   }
 
   const skipped = db
@@ -265,7 +294,7 @@ export function placeBid(db, roundId, user, rawAmount) {
 }
 
 export function finalizeRound(db, roundId, adminUserId) {
-  const round = db.prepare(`SELECT id, status, item_name, min_bid FROM rounds WHERE id = ?`).get(roundId);
+  const round = db.prepare(`SELECT id, status, item_name, min_bid, item_type, owner_squad_id, phase1_winner_id FROM rounds WHERE id = ?`).get(roundId);
   if (!round || round.status !== "live") {
     return { ok: false, code: "ROUND_NOT_LIVE", message: "Round is not live." };
   }
@@ -300,6 +329,31 @@ export function finalizeRound(db, roundId, adminUserId) {
       roundId,
       t
     );
+
+    // Player split logic
+    if (round.item_type === 'player' && round.owner_squad_id) {
+       const loser_id = (high.squad_id === round.owner_squad_id) ? round.phase1_winner_id : round.owner_squad_id;
+       const split_amount = Math.floor(high.amount / 2);
+       
+       if (loser_id) {
+          db.prepare(`UPDATE squads SET treasury_balance = treasury_balance + ? WHERE id = ?`).run(split_amount, loser_id);
+          db.prepare(`INSERT INTO ledger (squad_id, delta, reason, round_id, created_at) VALUES (?, ?, ?, ?, ?)`).run(
+            loser_id,
+            split_amount,
+            "PLAYER_AUCTION_SPLIT",
+            roundId,
+            t
+          );
+       }
+       
+       appendEvent(db, {
+         roundId,
+         eventType: "PLAYER_PAYOUT",
+         squadId: null,
+         userId: adminUserId,
+         meta: { playerCut: split_amount, itemName: round.item_name }
+       });
+    }
 
     db.prepare(
       `UPDATE rounds SET status = 'finalized', finalized_at = ?, unsold = 0, winner_squad_id = ?, winning_amount = ? WHERE id = ?`
@@ -368,6 +422,39 @@ export function getAuditLogs(db, limit = 200) {
     .all(limit);
 }
 
+export function setSquadTreasury(db, squadId, newBalance, adminUserId) {
+  if (!Number.isInteger(newBalance) || newBalance < 0) {
+    return { ok: false, message: "Balance must be a positive integer." };
+  }
+  const squad = db.prepare("SELECT name FROM squads WHERE id = ?").get(squadId);
+  if (!squad) {
+    return { ok: false, message: "Squad not found." };
+  }
+
+  const oldBalance = db.prepare("SELECT treasury_balance FROM squads WHERE id = ?").get(squadId).treasury_balance;
+  
+  db.prepare("UPDATE squads SET treasury_balance = ? WHERE id = ?").run(newBalance, squadId);
+  
+  const delta = newBalance - oldBalance;
+  if (delta !== 0) {
+    db.prepare(`INSERT INTO ledger (squad_id, delta, reason, created_at) VALUES (?, ?, ?, ?)`).run(
+      squadId,
+      delta,
+      "ADMIN_OVERRIDE",
+      nowIso()
+    );
+  }
+
+  appendEvent(db, {
+    eventType: "ADMIN_OVERRIDE",
+    squadId,
+    userId: adminUserId,
+    meta: { oldBalance, newBalance, squadName: squad.name },
+  });
+
+  return { ok: true };
+}
+
 export function buildPublicState(db) {
   const squads = getAllSquads(db);
   const live = getLiveRound(db);
@@ -407,6 +494,10 @@ export function buildPublicState(db) {
           contributionInfo: live.contribution_info,
           imageUrl: live.image_url,
           createdAt: live.created_at,
+          itemType: live.item_type,
+          ownerSquadId: live.owner_squad_id,
+          phase: live.phase,
+          phase1WinnerId: live.phase1_winner_id,
           highBid: high
             ? { amount: high.amount, squadKey: high.squad_key, squadName: high.squad_name }
             : null,

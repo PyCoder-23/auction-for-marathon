@@ -7,9 +7,15 @@ export function collectRoundPayload(form) {
     xpStats: form.xpStats.value.trim() || null,
     contributionInfo: form.contributionInfo.value.trim() || null,
     imageUrl: form.imageUrl.value.trim() || null,
+    itemType: form.itemType ? form.itemType.value : 'item',
+    ownerSquadId: form.ownerSquadId && form.itemType.value === 'player' ? form.ownerSquadId.value : null,
   };
 }
 
 export function resetRoundForm(form) {
   form.reset();
+  if (form.itemType) {
+    form.itemType.value = 'item';
+    form.itemType.dispatchEvent(new Event('change'));
+  }
 }

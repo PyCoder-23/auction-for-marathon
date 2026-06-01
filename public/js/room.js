@@ -112,8 +112,17 @@ function renderArena(state) {
   }
 
   const r = state.liveRound;
+  let phaseText = "";
+  if (r.itemType === 'player') {
+    if (r.phase === 1) {
+      phaseText = ` — PLAYER PHASE 1 (Owner restricted)`;
+    } else if (r.phase === 2) {
+      phaseText = ` — 1v1 SHOWDOWN (Owner vs Phase 1 Winner)`;
+    }
+  }
+
   strip.className = "status-strip";
-  strip.innerHTML = `<span class="pulse-dot"></span> LIVE LOT · ROUND #${r.id}`;
+  strip.innerHTML = `<span class="pulse-dot"></span> LIVE LOT · ROUND #${r.id}${phaseText}`;
   arenaTitle.className = "item-title";
   arenaTitle.textContent = r.itemName;
   arenaDesc.textContent = r.description || "—";
@@ -224,6 +233,44 @@ function renderAdmin(state) {
   deck.classList.remove("hidden");
   const fin = el("btn-finalize");
   if (fin) fin.disabled = !state.liveRound;
+  
+  const adv = el("btn-advance");
+  if (adv) {
+    if (state.liveRound && state.liveRound.itemType === 'player' && state.liveRound.phase === 1) {
+      adv.style.display = 'block';
+      adv.disabled = !state.liveRound.highBid;
+    } else {
+      adv.style.display = 'none';
+    }
+  }
+
+  const ownerSelect = el("ownerSquadId");
+  if (ownerSelect && ownerSelect.options.length === 1) {
+    state.squads.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.name;
+      ownerSelect.appendChild(opt);
+    });
+  }
+
+  const overrideSelect = el("overrideSquadId");
+  if (overrideSelect && overrideSelect.options.length === 0) {
+    state.squads.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `${s.name} (${formatMoney(s.treasury)})`;
+      overrideSelect.appendChild(opt);
+    });
+  } else if (overrideSelect) {
+    // Update the treasury text
+    Array.from(overrideSelect.options).forEach(opt => {
+      const s = state.squads.find(sq => String(sq.id) === opt.value);
+      if (s) {
+        opt.textContent = `${s.name} (${formatMoney(s.treasury)})`;
+      }
+    });
+  }
 }
 
 function applyState(state, presence) {
@@ -322,6 +369,51 @@ async function init() {
         toast(e.message || "Finalize failed", "error");
       }
     };
+  }
+
+  const btnAdv = el("btn-advance");
+  if (btnAdv) {
+    btnAdv.onclick = async () => {
+      const st = await api.getState();
+      if (!st.liveRound || st.liveRound.itemType !== 'player' || st.liveRound.phase !== 1) return;
+      if (!confirm("Advance to 1v1 Phase? Only the owner and the current high bidder will be able to bid.")) return;
+      try {
+        await api.advancePhase(st.liveRound.id);
+        toast("Advanced to Phase 2");
+      } catch (e) {
+        toast(e.message || "Failed to advance", "error");
+      }
+    };
+  }
+
+  const typeSel = el("itemType");
+  const ownerDiv = el("ownerSquadField");
+  if (typeSel && ownerDiv) {
+    typeSel.addEventListener("change", () => {
+      if (typeSel.value === 'player') {
+        ownerDiv.style.display = "block";
+        el("ownerSquadId").required = true;
+      } else {
+        ownerDiv.style.display = "none";
+        el("ownerSquadId").required = false;
+      }
+    });
+  }
+
+  const treasuryForm = el("treasury-form");
+  if (treasuryForm) {
+    treasuryForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const squadId = treasuryForm.overrideSquadId.value;
+      const amount = treasuryForm.overrideAmount.value;
+      try {
+        await api.setSquadTreasury(squadId, amount);
+        toast("Treasury updated");
+        treasuryForm.overrideAmount.value = "";
+      } catch (e) {
+        toast(e.message || "Update failed", "error");
+      }
+    });
   }
 
   el("btn-logout").onclick = async () => {

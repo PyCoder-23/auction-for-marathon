@@ -91,6 +91,12 @@ export function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_bids_round ON bids(round_id);
     CREATE INDEX IF NOT EXISTS idx_events_created ON auction_events(created_at DESC);
   `);
+
+  // Migrations for Player auctions
+  try { db.exec("ALTER TABLE rounds ADD COLUMN item_type TEXT NOT NULL DEFAULT 'item'"); } catch {}
+  try { db.exec("ALTER TABLE rounds ADD COLUMN owner_squad_id INTEGER REFERENCES squads(id)"); } catch {}
+  try { db.exec("ALTER TABLE rounds ADD COLUMN phase INTEGER NOT NULL DEFAULT 1"); } catch {}
+  try { db.exec("ALTER TABLE rounds ADD COLUMN phase1_winner_id INTEGER REFERENCES squads(id)"); } catch {}
 }
 
 const SQUADS = [

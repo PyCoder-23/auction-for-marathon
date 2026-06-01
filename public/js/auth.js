@@ -73,3 +73,11 @@ export async function fetchLogs(limit = 200) {
 export function redirect(path) {
   window.location.href = path;
 }
+
+export async function setSquadTreasury(squadId, amount) {
+  return api(`/api/squads/${squadId}/treasury`, { method: "POST", body: { amount } });
+}
+
+export async function advancePhase(roundId) {
+  return api(`/api/rounds/${roundId}/advance`, { method: "POST", body: {} });
+}

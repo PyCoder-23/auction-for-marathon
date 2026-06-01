@@ -41,6 +41,19 @@
           <h2 class="hud-title">Host command deck</h2>
           <form id="round-form">
             <div class="field">
+              <label for="itemType">Lot Type</label>
+              <select id="itemType" name="itemType">
+                <option value="item">Standard Item</option>
+                <option value="player">Player</option>
+              </select>
+            </div>
+            <div class="field" id="ownerSquadField" style="display:none">
+              <label for="ownerSquadId">Owning Squad</label>
+              <select id="ownerSquadId" name="ownerSquadId">
+                <option value="">-- Select Owner --</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="itemName">Item / player name</label>
               <input id="itemName" name="itemName" required maxlength="200" />
             </div>
@@ -77,7 +90,25 @@
             <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.75rem">
               Only you can finalize. Skips do not end the round.
             </p>
+            <button type="button" class="btn btn-warning" id="btn-advance" disabled style="margin-bottom: 0.5rem; display: none;">Start 1v1 Phase</button>
             <button type="button" class="btn btn-danger" id="btn-finalize" disabled>Finalize lot</button>
+          </div>
+          
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(184, 190, 200, 0.15)">
+            <p class="hud-title" style="margin-bottom: 0.5rem">Treasury Override</p>
+            <form id="treasury-form">
+              <div class="field">
+                <label for="overrideSquadId">Squad</label>
+                <select id="overrideSquadId" required></select>
+              </div>
+              <div class="field">
+                <label for="overrideAmount">New Balance</label>
+                <input id="overrideAmount" type="number" min="0" step="1" required />
+              </div>
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary" style="background:var(--accent);color:#000">Set Coins</button>
+              </div>
+            </form>
           </div>
         </aside>
 
